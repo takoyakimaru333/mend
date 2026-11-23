@@ -172,18 +172,21 @@ function findAnchor(lines: string[], anchor: string, from: number, strict: boole
 }
 
 /** One line of a hunk body: context, an old line, a new line, or the
- * backslash marker that refers to the body line before it. */
+ * backslash marker that refers to the body line before it. `blank` records
+ * that the patch line itself was empty (a line holding one space is a
+ * context line whose text is empty, but it is not an empty line). */
 interface BodyLine {
   kind: 'ctx' | 'old' | 'new' | 'mark';
   text: string;
+  blank: boolean;
 }
 
 function toBodyLine(l: string): BodyLine {
-  if (l === '') return { kind: 'ctx', text: '' };
-  if (l[0] === ' ') return { kind: 'ctx', text: l.slice(1) };
-  if (l[0] === '-') return { kind: 'old', text: l.slice(1) };
-  if (l[0] === '+') return { kind: 'new', text: l.slice(1) };
-  return { kind: 'mark', text: l.slice(1) };
+  if (l === '') return { kind: 'ctx', text: '', blank: true };
+  if (l[0] === ' ') return { kind: 'ctx', text: l.slice(1), blank: false };
+  if (l[0] === '-') return { kind: 'old', text: l.slice(1), blank: false };
+  if (l[0] === '+') return { kind: 'new', text: l.slice(1), blank: false };
+  return { kind: 'mark', text: l.slice(1), blank: false };
 }
 
 /** One line of the replacement: a context line, written as the file's own
@@ -404,7 +407,7 @@ function parseUnified(lines: string[], strict: boolean): Edit[] {
     if (hunk === null) return;
     while (hunk.body.length > 0) {
       const last = hunk.body[hunk.body.length - 1] as BodyLine;
-      if (last.kind === 'ctx' && last.text === '') hunk.body.pop();
+      if (last.kind === 'ctx' && last.blank) hunk.body.pop();
       else break;
     }
     hunk = null;
